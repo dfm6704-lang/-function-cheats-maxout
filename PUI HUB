@@ -1,0 +1,585 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local VirtualUser = game:GetService("VirtualUser")
+local Camera = workspace.CurrentCamera
+
+-- ==========================================
+-- ส่วนที่ 1: หน้าโหลดดาวน์โหลด 1% - 100% (Progress Loader)
+-- ==========================================
+local function RunLoadingScreen()
+    local targetParent = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+
+    local oldGui = targetParent:FindFirstChild("PUIHubLoader100")
+    if oldGui then oldGui:Destroy() end
+
+    local LoaderGui = Instance.new("ScreenGui")
+    LoaderGui.Name = "PUIHubLoader100"
+    LoaderGui.IgnoreGuiInset = true
+    LoaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    LoaderGui.Parent = targetParent
+
+    local Box = Instance.new("Frame")
+    Box.Size = UDim2.fromOffset(300, 170)
+    Box.Position = UDim2.fromScale(0.5, 0.5)
+    Box.AnchorPoint = Vector2.new(0.5, 0.5)
+    Box.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    Box.BorderSizePixel = 0
+    Box.Parent = LoaderGui
+
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 10)
+    BoxCorner.Parent = Box
+
+    local BoxStroke = Instance.new("UIStroke")
+    BoxStroke.Color = Color3.fromRGB(255, 65, 65)
+    BoxStroke.Thickness = 1.5
+    BoxStroke.Parent = Box
+
+    local Banner = Instance.new("ImageLabel")
+    Banner.Size = UDim2.new(1, 0, 1, 0)
+    Banner.BackgroundTransparency = 1
+    Banner.Image = "rbxassetid://101767646310441"
+    Banner.ImageTransparency = 0.55
+    Banner.ScaleType = Enum.ScaleType.Crop
+    Banner.Parent = Box
+
+    local BannerCorner = Instance.new("UICorner")
+    BannerCorner.CornerRadius = UDim.new(0, 10)
+    BannerCorner.Parent = Banner
+
+    local Overlay = Instance.new("Frame")
+    Overlay.Size = UDim2.new(1, 0, 1, 0)
+    Overlay.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+    Overlay.BackgroundTransparency = 0.35
+    Overlay.BorderSizePixel = 0
+    Overlay.Parent = Box
+
+    local OverlayCorner = Instance.new("UICorner")
+    OverlayCorner.CornerRadius = UDim.new(0, 10)
+    OverlayCorner.Parent = Overlay
+
+    local TitleTxt = Instance.new("TextLabel")
+    TitleTxt.Size = UDim2.new(1, -20, 0, 24)
+    TitleTxt.Position = UDim2.new(0, 10, 0, 14)
+    TitleTxt.BackgroundTransparency = 1
+    TitleTxt.Text = "⚡ PUI HUB LOADER"
+    TitleTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleTxt.Font = Enum.Font.GothamBold
+    TitleTxt.TextSize = 14
+    TitleTxt.TextXAlignment = Enum.TextXAlignment.Left
+    TitleTxt.Parent = Box
+
+    local StatusTxt = Instance.new("TextLabel")
+    StatusTxt.Size = UDim2.new(1, -20, 0, 20)
+    StatusTxt.Position = UDim2.new(0, 10, 0, 56)
+    StatusTxt.BackgroundTransparency = 1
+    StatusTxt.Text = "กำลังเตรียมระบบ... 1%"
+    StatusTxt.TextColor3 = Color3.fromRGB(235, 235, 245)
+    StatusTxt.Font = Enum.Font.GothamSemibold
+    StatusTxt.TextSize = 12
+    StatusTxt.Parent = Box
+
+    local PercentTxt = Instance.new("TextLabel")
+    PercentTxt.Size = UDim2.new(1, -20, 0, 28)
+    PercentTxt.Position = UDim2.new(0, 10, 0, 76)
+    PercentTxt.BackgroundTransparency = 1
+    PercentTxt.Text = "1%"
+    PercentTxt.TextColor3 = Color3.fromRGB(255, 85, 85)
+    PercentTxt.Font = Enum.Font.GothamBold
+    PercentTxt.TextSize = 22
+    PercentTxt.Parent = Box
+
+    local BarBg = Instance.new("Frame")
+    BarBg.Size = UDim2.new(1, -24, 0, 10)
+    BarBg.Position = UDim2.new(0, 12, 1, -26)
+    BarBg.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    BarBg.BorderSizePixel = 0
+    BarBg.Parent = Box
+
+    local BarBgCorner = Instance.new("UICorner")
+    BarBgCorner.CornerRadius = UDim.new(1, 0)
+    BarBgCorner.Parent = BarBg
+
+    local BarFill = Instance.new("Frame")
+    BarFill.Size = UDim2.new(0.01, 0, 1, 0)
+    BarFill.BackgroundColor3 = Color3.fromRGB(255, 65, 65)
+    BarFill.BorderSizePixel = 0
+    BarFill.Parent = BarBg
+
+    local BarFillCorner = Instance.new("UICorner")
+    BarFillCorner.CornerRadius = UDim.new(1, 0)
+    BarFillCorner.Parent = BarFill
+
+    local steps = {
+        { target = 25, text = "กำลังตรวจสอบตัวละครและบริการ..." },
+        { target = 55, text = "กำลังดาวน์โหลด Fluent UI..." },
+        { target = 85, text = "กำลังติดตั้งฟังก์ชันสายโหด..." },
+        { target = 100, text = "ดาวน์โหลดเสร็จสมบูรณ์!" }
+    }
+
+    local currentPercent = 1
+    local function SetProgress(p, msg)
+        currentPercent = math.clamp(p, 1, 100)
+        PercentTxt.Text = tostring(currentPercent) .. "%"
+        StatusTxt.Text = string.format("%s (%d%%)", msg, currentPercent)
+        BarFill.Size = UDim2.new(currentPercent / 100, 0, 1, 0)
+    end
+
+    for i = 1, 25 do
+        SetProgress(i, steps[1].text)
+        task.wait(0.015)
+    end
+
+    local fluentLoaded, saveLoaded, ifaceLoaded
+    local loadDone = false
+
+    task.spawn(function()
+        local ok1, res1 = pcall(function()
+            return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+        end)
+        if ok1 then fluentLoaded = res1 end
+
+        local ok2, res2 = pcall(function()
+            return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+        end)
+        if ok2 then saveLoaded = res2 end
+
+        local ok3, res3 = pcall(function()
+            return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+        end)
+        if ok3 then ifaceLoaded = res3 end
+
+        loadDone = true
+    end)
+
+    for i = 26, 55 do
+        SetProgress(i, steps[2].text)
+        task.wait(0.02)
+    end
+
+    while not loadDone and currentPercent < 75 do
+        SetProgress(currentPercent + 1, steps[2].text)
+        task.wait(0.04)
+    end
+
+    local startMid = math.min(currentPercent + 1, 85)
+    for i = startMid, 85 do
+        SetProgress(i, steps[3].text)
+        task.wait(0.015)
+    end
+
+    for i = 86, 100 do
+        SetProgress(i, steps[4].text)
+        task.wait(0.015)
+    end
+
+    task.wait(0.25)
+    LoaderGui:Destroy()
+
+    return fluentLoaded, saveLoaded, ifaceLoaded
+end
+
+local Fluent, SaveManager, InterfaceManager = RunLoadingScreen()
+
+if not Fluent then
+    warn("PUI HUB: โหลด Fluent UI ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตหรือ Executor")
+    return
+end
+
+-- ==========================================
+-- ส่วนที่ 2: หน้าต่างเมนูหลัก (Compact Fluent UI)
+-- ==========================================
+local Window = Fluent:CreateWindow({
+    Title = "⚡ PUI HUB",
+    SubTitle = "v1.6 Mini+",
+    TabWidth = 125,
+    Size = UDim2.fromOffset(490, 355),
+    Acrylic = true,
+    Theme = "Darker",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Info = Window:AddTab({ Title = "หน้าหลัก", Icon = "info" }),
+    Main = Window:AddTab({ Title = "ความสามารถ", Icon = "zap" }),
+    Combat = Window:AddTab({ Title = "สายโหด", Icon = "crosshair" }),
+    Visual = Window:AddTab({ Title = "มองทะลุ", Icon = "eye" }),
+    Misc = Window:AddTab({ Title = "อื่นๆ", Icon = "box" }),
+    Settings = Window:AddTab({ Title = "ตั้งค่า", Icon = "settings" })
+}
+
+local Options = Fluent.Options
+
+-- ==========================================
+-- ส่วนที่ 3: ปุ่มเปิด/ปิดลอยขนาดเล็ก (Mini Toggle)
+-- ==========================================
+local uiVisible = true
+
+local function SetWindowVisible(state)
+    uiVisible = state
+    if Window.Root then
+        Window.Root.Visible = uiVisible
+    end
+    if Window.Minimized and uiVisible then
+        Window:Minimize()
+    end
+end
+
+local function CreateFloatingToggle()
+    local targetParent = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+
+    local oldToggle = targetParent:FindFirstChild("PUIHubPersistentToggle")
+    if oldToggle then oldToggle:Destroy() end
+
+    local ToggleGui = Instance.new("ScreenGui")
+    ToggleGui.Name = "PUIHubPersistentToggle"
+    ToggleGui.ResetOnSpawn = false
+    ToggleGui.IgnoreGuiInset = true
+    ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ToggleGui.Parent = targetParent
+
+    local ToggleBtn = Instance.new("ImageButton")
+    ToggleBtn.Name = "ToggleCoverButton"
+    ToggleBtn.Size = UDim2.fromOffset(44, 44)
+    ToggleBtn.Position = UDim2.new(0, 14, 0.5, -22)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.Image = "rbxassetid://101767646310441"
+    ToggleBtn.ScaleType = Enum.ScaleType.Crop
+    ToggleBtn.Active = true
+    ToggleBtn.Parent = ToggleGui
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(1, 0)
+    BtnCorner.Parent = ToggleBtn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(255, 65, 65)
+    BtnStroke.Thickness = 1.8
+    BtnStroke.Parent = ToggleBtn
+
+    local dragging = false
+    local dragInput, dragStart, startPos
+    local movedDistance = 0
+
+    ToggleBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = ToggleBtn.Position
+            movedDistance = 0
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    ToggleBtn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            movedDistance = delta.Magnitude
+            ToggleBtn.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    ToggleBtn.MouseButton1Click:Connect(function()
+        if movedDistance < 8 then
+            SetWindowVisible(not uiVisible)
+        end
+    end)
+end
+
+CreateFloatingToggle()
+
+-- ตัวแปรร่วมและตัวช่วยพื้นฐาน
+local selectedPlayerName = nil
+local spawnCFrame = nil
+
+local function CaptureSpawnPoint(char)
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp and not spawnCFrame then
+        spawnCFrame = hrp.CFrame
+    end
+end
+
+if LocalPlayer.Character then
+    CaptureSpawnPoint(LocalPlayer.Character)
+end
+
+-- ==========================================
+-- แท็บ 1: หน้าหลัก (Home)
+-- ==========================================
+do
+    Tabs.Info:AddParagraph({
+        Title = "⚡ PUI HUB v1.6 Mini+",
+        Content = "• แตะปุ่มวงกลมเล็กด้านซ้าย หรือกด Left Ctrl เพื่อซ่อน/เปิดเมนู\n• ลากปุ่มวงกลมย้ายที่ได้อิสระ และไม่หายเมื่อเกิดใหม่\n• รองรับการเกิดใหม่ (Respawn) และเซฟค่าตั้งค่าได้"
+    })
+
+    Tabs.Info:AddParagraph({
+        Title = "ข้อมูลผู้ใช้งาน",
+        Content = "ชื่อ: " .. LocalPlayer.Name .. " (" .. LocalPlayer.DisplayName .. ")\nID: " .. tostring(LocalPlayer.UserId) .. "\nPlace ID: " .. tostring(game.PlaceId)
+    })
+
+    Tabs.Info:AddButton({
+        Title = "แจ้งเตือนทดสอบระบบ (Notify)",
+        Callback = function()
+            Fluent:Notify({
+                Title = "⚡ PUI HUB",
+                Content = "ระบบพร้อมใช้งาน 100%",
+                Duration = 3
+            })
+        end
+    })
+end
+
+-- ==========================================
+-- แท็บ 2: ความสามารถ (Main)
+-- ==========================================
+do
+    local SpeedSection = Tabs.Main:AddSection("🏃 วิ่งเร็ว (Movement)")
+
+    SpeedSection:AddSlider("WalkSpeedSlider", {
+        Title = "ความเร็วเดิน",
+        Description = "ปกติ = 16",
+        Default = 16,
+        Min = 1,
+        Max = 500,
+        Rounding = 0,
+        Callback = function(Value)
+            if Options.WalkSpeedToggle and Options.WalkSpeedToggle.Value then
+                local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum.WalkSpeed = Value end
+            end
+        end
+    })
+
+    local WalkSpeedToggle = SpeedSection:AddToggle("WalkSpeedToggle", {
+        Title = "เปิดใช้งาน วิ่งเร็ว",
+        Default = false
+    })
+
+    WalkSpeedToggle:OnChanged(function(State)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = State and Options.WalkSpeedSlider.Value or 16
+        end
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        if Options.WalkSpeedToggle and Options.WalkSpeedToggle.Value then
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.WalkSpeed ~= Options.WalkSpeedSlider.Value then
+                hum.WalkSpeed = Options.WalkSpeedSlider.Value
+            end
+        end
+    end)
+
+    local FlySection = Tabs.Main:AddSection("🕊️ ระบบบิน (Flight)")
+
+    FlySection:AddSlider("FlySpeedSlider", {
+        Title = "ความเร็วบิน",
+        Default = 50,
+        Min = 1,
+        Max = 500,
+        Rounding = 0,
+        Callback = function() end
+    })
+
+    local flying = false
+    local flyConnection
+    local bv, bg
+
+    local function StopFlight()
+        flying = false
+        if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+        if bv then bv:Destroy() bv = nil end
+        if bg then bg:Destroy() bg = nil end
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end
+
+    local function StartFlight()
+        StopFlight()
+        flying = true
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = true end
+
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = hrp
+
+        bg = Instance.new("BodyGyro")
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.CFrame = hrp.CFrame
+        bg.Parent = hrp
+
+        flyConnection = RunService.RenderStepped:Connect(function()
+            if not flying or not char or not char.Parent or not hrp.Parent then
+                StopFlight()
+                return
+            end
+            local cam = workspace.CurrentCamera
+            local moveDir = Vector3.new(0, 0, 0)
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+            if moveDir.Magnitude > 0 then
+                moveDir = moveDir.Unit
+            end
+
+            bv.Velocity = moveDir * (Options.FlySpeedSlider and Options.FlySpeedSlider.Value or 50)
+            bg.CFrame = cam.CFrame
+        end)
+    end
+
+    local FlyToggle = FlySection:AddToggle("FlyToggle", {
+        Title = "เปิดใช้งาน บิน (WASD / Space / Shift)",
+        Default = false
+    })
+
+    FlyToggle:OnChanged(function(State)
+        if State then
+            StartFlight()
+        else
+            StopFlight()
+        end
+    end)
+
+    local JumpSection = Tabs.Main:AddSection("🦘 กระโดด (Jump)")
+
+    JumpSection:AddSlider("JumpPowerSlider", {
+        Title = "พลังกระโดด",
+        Description = "ปกติ = 50",
+        Default = 50,
+        Min = 1,
+        Max = 500,
+        Rounding = 0,
+        Callback = function(Value)
+            if Options.JumpToggle and Options.JumpToggle.Value then
+                local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.UseJumpPower = true
+                    hum.JumpPower = Value
+                end
+            end
+        end
+    })
+
+    local JumpToggle = JumpSection:AddToggle("JumpToggle", {
+        Title = "เปิดใช้งาน กระโดดสูง",
+        Default = false
+    })
+
+    JumpToggle:OnChanged(function(State)
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = State and Options.JumpPowerSlider.Value or 50
+        end
+    end)
+
+    JumpSection:AddToggle("InfJumpToggle", {
+        Title = "กระโดดกลางอากาศไม่จำกัด (Inf Jump)",
+        Default = false
+    })
+
+    UserInputService.JumpRequest:Connect(function()
+        if Options.InfJumpToggle and Options.InfJumpToggle.Value then
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end
+    end)
+
+    local NoclipSection = Tabs.Main:AddSection("👻 เดินทะลุ (Noclip)")
+
+    local noclipConnection
+    local NoclipToggle = NoclipSection:AddToggle("NoclipToggle", {
+        Title = "เปิดใช้งาน เดินทะลุกำแพง",
+        Default = false
+    })
+
+    NoclipToggle:OnChanged(function(State)
+        if State then
+            if noclipConnection then noclipConnection:Disconnect() end
+            noclipConnection = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
+            local char = LocalPlayer.Character
+            if char then
+                for _, partName in ipairs({"HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso", "Head"}) do
+                    local part = char:FindFirstChild(partName)
+                    if part and part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end
+    end)
+
+    local TpSection = Tabs.Main:AddSection("📍 ระบบวาป (Teleport)")
+
+    local function GetPlayerList()
+        local list = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then table.insert(list, plr.Name) end
+        end
+        table.sort(list)
+        return list
+    end
+
+    local PlayerDropdown = TpSection:AddDropdown("PlayerTpDropdown", {
+        Title = "เลือกผู้เล่น",
+        Values = GetPlayerList(),
+        Multi = false,
+        Default = nil,
+        Callback = function(Value) selectedPlayerName = Value end
+    })
+
+    TpSection:AddButton({
+        Title = "รีเฟรชรายชื่อ",
+        Callback = function()
+            PlayerDropdown:SetValues(GetPlayerList())
+            Fluent:Notify({ Title = "PUI HUB", Content = "อัปเดตรายชื่อผู้เล่นแล้ว", Duration = 2 })
+        end
+    })
+
+    TpSection:AddButton({
+        Title = "วาปไปหาผู้เล่น",
+        Callback = function()
+            if not selectedPlayerName then
